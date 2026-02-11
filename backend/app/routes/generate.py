@@ -1,0 +1,96 @@
+"""
+Code Generation Routes
+"""
+from flask import Blueprint, request, jsonify
+from app.middleware.auth_middleware import require_auth
+from app.services.gemini_service import GeminiService
+from app.services.db_service import DatabaseService
+
+generate_bp = Blueprint('generate', __name__, url_prefix='/api')
+
+# Supported programming languages
+SUPPORTED_LANGUAGES = [
+    'python', 'javascript', 'typescript', 'java', 'cpp', 'c',
+    'csharp', 'ruby', 'go', 'php', 'swift', 'kotlin', 'rust'
+]
+
+
+@generate_bp.route('/generate', methods=['POST'])
+@require_auth
+def generate_code(current_user):
+    """Generate code from natural language prompt using Gemini API."""
+    data = request.get_json()
+    
+    # Validate request body
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+    
+    # Validate prompt
+    prompt = data.get('prompt', '').strip()
+    if not prompt:
+        return jsonify({'error': 'Prompt is required'}), 400
+    
+    if len(prompt) < 10:
+        return jsonify({'error': 'Prompt is too short. Please provide more details.'}), 400
+    
+    if len(prompt) > 2000:
+        return jsonify({'error': 'Prompt exceeds maximum length of 2000 characters'}), 400
+    
+    # Validate language
+    language = data.get('language', 'python').lower().strip()
+    if language not in SUPPORTED_LANGUAGES:
+        return jsonify({
+            'error': f'Unsupported language. Supported: {", ".join(SUPPORTED_LANGUAGES)}'
+        }), 400
+    
+    try:
+        # Call Gemini API through service layer
+        result = GeminiService.generate_code_with_explanation(
+            prompt=prompt,
+            language=language
+        )
+        
+        if not result['success']:
+            return jsonify({'error': result['error']}), 503
+        
+        # Store generation in database
+        generation_id = DatabaseService.save_generation(
+            user_id=current_user['id'],
+            prompt=prompt,
+            language=language,
+            code=result['code'],
+            explanation=result['explanation']
+        )
+        
+        return jsonify({
+            'id': generation_id,
+            'code': result['code'],
+            'explanation': result['explanation'],
+            'language': language,
+            'prompt': prompt
+        }), 200
+        
+    except Exception as e:
+        print(f"Generation error: {str(e)}")
+        return jsonify({'error': 'An error occurred during code generation'}), 500
+
+
+@generate_bp.route('/languages', methods=['GET'])
+def get_supported_languages():
+    """Get list of supported programming languages."""
+    language_info = [
+        {'id': 'python', 'name': 'Python', 'extension': '.py'},
+        {'id': 'javascript', 'name': 'JavaScript', 'extension': '.js'},
+        {'id': 'typescript', 'name': 'TypeScript', 'extension': '.ts'},
+        {'id': 'java', 'name': 'Java', 'extension': '.java'},
+        {'id': 'cpp', 'name': 'C++', 'extension': '.cpp'},
+        {'id': 'c', 'name': 'C', 'extension': '.c'},
+        {'id': 'csharp', 'name': 'C#', 'extension': '.cs'},
+        {'id': 'ruby', 'name': 'Ruby', 'extension': '.rb'},
+        {'id': 'go', 'name': 'Go', 'extension': '.go'},
+        {'id': 'php', 'name': 'PHP', 'extension': '.php'},
+        {'id': 'swift', 'name': 'Swift', 'extension': '.swift'},
+        {'id': 'kotlin', 'name': 'Kotlin', 'extension': '.kt'},
+        {'id': 'rust', 'name': 'Rust', 'extension': '.rs'}
+    ]
+    return jsonify({'languages': language_info}), 200
