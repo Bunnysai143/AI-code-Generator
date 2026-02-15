@@ -6,11 +6,51 @@
 
 ## 1. ABSTRACT
 
-This project presents the design and implementation of an AI-Powered Code Generator with Explanation, a web-based application that leverages free cloud-based artificial intelligence services to assist developers and learners in generating programming code along with comprehensive explanations. The system employs a modern three-tier architecture comprising a React.js frontend client, a Python Flask backend server, and MongoDB Atlas as the database layer. The core functionality utilizes the Google Gemini Free API to process natural language prompts and produce syntactically correct code snippets accompanied by detailed explanations of the underlying logic and programming concepts.
+This project presents the design and implementation of an **AI-Powered Code Generator with Explanation and Multi-Language Code Execution Sandbox**, a comprehensive web-based application that leverages cloud-based artificial intelligence services and online code execution APIs to assist developers and learners in generating, understanding, and testing programming code across 13+ programming languages. The system employs a modern three-tier architecture comprising a React.js frontend client, a Python Flask backend server, and MongoDB Atlas as the database layer.
 
-The application addresses the growing need for accessible programming assistance tools that can bridge the gap between conceptual understanding and practical implementation. By integrating a free-tier AI service, the system ensures accessibility without requiring users to incur API costs or maintain local computational resources. The React-based frontend provides an intuitive user interface for submitting code generation requests, while the Flask backend manages API communication, user authentication, and data persistence. MongoDB Atlas serves as the document-oriented database, storing user profiles, generation history, and code explanations in a flexible schema structure.
+### Core Capabilities
 
-The proposed system demonstrates practical application of RESTful API design principles, secure credential management through environment variables, and effective integration of third-party AI services. This project contributes to the domain of educational technology by providing a functional tool that supports both novice programmers seeking to learn through example and experienced developers requiring quick code scaffolding with explanatory context.
+The application provides the following key functionalities:
+
+1. **AI-Powered Code Generation**: Utilizes the Google Gemini 2.5 Flash API to process natural language prompts and produce syntactically correct code snippets with comprehensive explanations.
+
+2. **Multi-Language Code Execution Sandbox**: Integrates the Piston API for cloud-based code execution supporting 13 programming languages (Python, JavaScript, TypeScript, Java, C++, C, C#, Ruby, Go, PHP, Swift, Kotlin, Rust) without requiring local compiler installations.
+
+3. **Conversational Code Refinement**: Enables iterative code improvement through natural language dialogue, maintaining context across multiple refinement rounds.
+
+4. **Code Explanation Engine**: Provides detailed explanations of any code snippet, helping users understand programming concepts and logic.
+
+5. **GitHub Gist Integration**: Allows users to save and share generated code directly to GitHub Gists.
+
+6. **Favorites System**: Enables saving and organizing frequently accessed code generations.
+
+7. **Generation History**: Complete history tracking with search and statistics.
+
+### Technical Architecture
+
+| Layer | Technology | Version | Purpose |
+|-------|------------|---------|---------|
+| **Frontend** | React.js | 18.2.0 | Single-page application UI |
+| **UI Components** | Monaco Editor | 4.7.0 | Professional code editing |
+| **Syntax Highlighting** | react-syntax-highlighter | 15.5.0 | Code display |
+| **HTTP Client** | Axios | 1.6.2 | API communication |
+| **Routing** | react-router-dom | 6.21.1 | Navigation |
+| **Backend** | Python Flask | 3.0.0 | RESTful API server |
+| **Authentication** | PyJWT + bcrypt | 2.8.0 / 4.1.2 | JWT-based auth |
+| **Database** | MongoDB Atlas | - | Document storage |
+| **Database Driver** | PyMongo | 4.6.1 | MongoDB connectivity |
+| **AI Service** | Google Gemini API | 2.5-flash | Code generation |
+| **Code Execution** | Piston API | v2 | Multi-language execution |
+| **Production Server** | Gunicorn | 21.2.0 | WSGI server |
+
+### Innovation Highlights
+
+- **Zero-Cost Architecture**: Exclusively uses free-tier services (Gemini Free API, Piston API, MongoDB Atlas M0)
+- **No Local Compiler Required**: Cloud-based execution eliminates need for local language installations
+- **Educational Focus**: Every code generation includes detailed explanations
+- **Security-First Design**: Language-specific security patterns prevent dangerous code execution
+
+This project demonstrates practical integration of multiple cloud services to deliver a production-ready educational tool accessible to students and developers worldwide without financial barriers.
 
 ---
 
@@ -68,12 +108,50 @@ The backend implementation includes prompt engineering techniques that structure
 
 ### 4.3 Technology Stack Summary
 
-| Layer | Technology | Justification |
-|-------|------------|---------------|
-| Frontend | React.js | Component-based architecture, virtual DOM efficiency, extensive ecosystem |
-| Backend | Python Flask | Lightweight framework, Python AI library compatibility, RESTful design |
-| Database | MongoDB Atlas | Free tier availability, document flexibility, JSON-native storage |
-| AI Service | Google Gemini Free API | Zero cost, no local compute requirements, quality output |
+| Layer | Technology | Version | Justification |
+|-------|------------|---------|---------------|
+| Frontend | React.js | 18.2.0 | Component-based architecture, virtual DOM efficiency, extensive ecosystem |
+| Code Editor | Monaco Editor | 4.7.0 | VS Code-powered editor with IntelliSense |
+| Syntax Highlighting | react-syntax-highlighter | 15.5.0 | Beautiful code rendering with themes |
+| HTTP Client | Axios | 1.6.2 | Promise-based HTTP with interceptors |
+| Routing | react-router-dom | 6.21.1 | Declarative routing for SPA |
+| Backend | Python Flask | 3.0.0 | Lightweight framework, Python AI library compatibility |
+| CORS | flask-cors | 4.0.0 | Cross-origin resource sharing |
+| Authentication | PyJWT + bcrypt | 2.8.0 / 4.1.2 | Secure JWT tokens with password hashing |
+| Database | MongoDB Atlas | M0 (Free) | Document flexibility, JSON-native storage |
+| Database Driver | PyMongo | 4.6.1 | Official MongoDB Python driver |
+| AI Service | Google Gemini | 2.5-flash | Zero cost, high-quality code generation |
+| Code Execution | Piston API | v2 | Multi-language cloud execution (13+ languages) |
+| HTTP Requests | requests | 2.31.0 | External API communication |
+| Production Server | Gunicorn | 21.2.0 | Production-grade WSGI server |
+
+### 4.4 Code Execution Sandbox (Piston API Integration)
+
+A key innovation of this system is the integration of the **Piston API** for cloud-based code execution. This eliminates the need for users or servers to install language compilers/interpreters locally.
+
+**Supported Languages for Execution:**
+
+| Language | Version | File Extension | Compilation Required |
+|----------|---------|----------------|---------------------|
+| Python | 3.10.0 | .py | No |
+| JavaScript | 18.15.0 | .js | No |
+| TypeScript | 5.0.3 | .ts | No (ts-node) |
+| Java | 15.0.2 | .java | Yes (automatic) |
+| C++ | 10.2.0 | .cpp | Yes (g++) |
+| C | 10.2.0 | .c | Yes (gcc) |
+| C# | 6.12.0 | .cs | Yes (mono) |
+| Ruby | 3.0.1 | .rb | No |
+| Go | 1.16.2 | .go | No (go run) |
+| PHP | 8.2.3 | .php | No |
+| Swift | 5.3.3 | .swift | No |
+| Kotlin | 1.8.20 | .kt | Yes (automatic) |
+| Rust | 1.68.2 | .rs | Yes (rustc) |
+
+**Security Measures:**
+- Language-specific dangerous pattern detection
+- Timeout limits per language (10-20 seconds)
+- Memory limits enforced by Piston API
+- No file system or network access
 
 ---
 
@@ -88,26 +166,30 @@ The system follows a layered architecture pattern that separates concerns across
 │                           USER BROWSER                                   │
 │                                                                          │
 │    ┌──────────────────────────────────────────────────────────────┐     │
-│    │                    REACT.JS CLIENT                            │     │
+│    │                    REACT.JS CLIENT (v18.2.0)                  │     │
 │    │  ┌────────────┐  ┌────────────┐  ┌────────────────────────┐  │     │
-│    │  │   Login    │  │   Code     │  │      History           │  │     │
-│    │  │ Component  │  │  Editor    │  │      Viewer            │  │     │
+│    │  │   Login    │  │  Monaco    │  │   History / Favorites  │  │     │
+│    │  │ Register   │  │  Editor    │  │      Viewer            │  │     │
 │    │  └────────────┘  └────────────┘  └────────────────────────┘  │     │
-│    │                                                               │     │
+│    │  ┌────────────┐  ┌────────────┐  ┌────────────────────────┐  │     │
+│    │  │  Code      │  │ Refinement │  │   Gist Integration     │  │     │
+│    │  │  Sandbox   │  │ Chat       │  │   (GitHub API)         │  │     │
+│    │  └────────────┘  └────────────┘  └────────────────────────┘  │     │
 │    │  ┌────────────────────────────────────────────────────────┐  │     │
-│    │  │              API Service Layer (Axios)                  │  │     │
+│    │  │              API Service Layer (Axios 1.6.2)            │  │     │
 │    │  └────────────────────────────────────────────────────────┘  │     │
 │    └──────────────────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    │ HTTP/REST
+                                    │ HTTP/REST (JSON)
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         FLASK BACKEND SERVER                             │
+│                      FLASK BACKEND SERVER (v3.0.0)                       │
 │                                                                          │
 │    ┌──────────────────────────────────────────────────────────────┐     │
 │    │                    API ROUTES LAYER                           │     │
-│    │  /api/auth/*  │  /api/generate  │  /api/history  │  /api/explain   │
+│    │  /api/auth/*   │ /api/generate  │ /api/execute  │ /api/gist  │     │
+│    │  /api/history  │ /api/explain   │ /api/favorites│             │     │
 │    └──────────────────────────────────────────────────────────────┘     │
 │                                    │                                     │
 │    ┌──────────────────────────────────────────────────────────────┐     │
@@ -123,19 +205,27 @@ The system follows a layered architecture pattern that separates concerns across
 │    │  GEMINI_API_KEY  │  MONGODB_URI  │  SECRET_KEY               │     │
 │    └──────────────────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────┘
-            │                                           │
-            │ HTTPS                                     │ MongoDB Protocol
-            ▼                                           ▼
-┌───────────────────────────┐               ┌───────────────────────────┐
-│   GOOGLE GEMINI API       │               │    MONGODB ATLAS          │
-│   (Free Tier)             │               │    (Free Tier M0)         │
-│                           │               │                           │
-│   - Code Generation       │               │   Collections:            │
-│   - Explanation           │               │   - users                 │
-│   - Multi-language        │               │   - code_generations      │
-│                           │               │   - explanations          │
-│                           │               │   - history               │
-└───────────────────────────┘               └───────────────────────────┘
+            │                          │                        │
+            │ HTTPS                    │ HTTPS                  │ MongoDB Protocol
+            ▼                          ▼                        ▼
+┌──────────────────────┐   ┌──────────────────────┐   ┌───────────────────────┐
+│  GOOGLE GEMINI API   │   │    PISTON API        │   │    MONGODB ATLAS      │
+│  (Free Tier)         │   │    (Free, No Key)    │   │    (Free Tier M0)     │
+│                      │   │                      │   │                       │
+│  Model: gemini-2.5-  │   │  - Python 3.10       │   │   Collections:        │
+│         flash        │   │  - JavaScript 18.x   │   │   - users             │
+│                      │   │  - TypeScript 5.x    │   │   - code_generations  │
+│  Features:           │   │  - Java 15           │   │   - favorites         │
+│  - Code Generation   │   │  - C++ (g++ 10)      │   │   - history           │
+│  - Explanation       │   │  - C (gcc 10)        │   │                       │
+│  - Refinement        │   │  - C# (mono 6.12)    │   │                       │
+│  - Multi-language    │   │  - Ruby 3.0          │   │                       │
+│                      │   │  - Go 1.16           │   │                       │
+│                      │   │  - PHP 8.2           │   │                       │
+│                      │   │  - Swift 5.3         │   │                       │
+│                      │   │  - Kotlin 1.8        │   │                       │
+│                      │   │  - Rust 1.68         │   │                       │
+└──────────────────────┘   └──────────────────────┘   └───────────────────────┘
 ```
 
 ### 5.2 Request Flow
@@ -1211,42 +1301,94 @@ The following enhancements could extend the system's capabilities in future iter
 
 ## 15. CONCLUSION
 
-This project presents the design and implementation of an AI-Powered Code Generator with Explanation, a web application that leverages free-tier cloud services to deliver accessible programming assistance. By utilizing the Google Gemini Free API, the system eliminates the computational and financial barriers typically associated with AI-powered development tools.
+This project presents the design and implementation of an **AI-Powered Code Generator with Explanation and Multi-Language Code Execution Sandbox**, a comprehensive web application that leverages free-tier cloud services to deliver accessible programming assistance. By utilizing the Google Gemini Free API for code generation and the Piston API for code execution, the system eliminates the computational and financial barriers typically associated with AI-powered development tools.
 
-The three-tier architecture comprising React frontend, Flask backend, and MongoDB database demonstrates practical application of modern web development practices while maintaining simplicity appropriate for an academic project. The system successfully integrates these components to provide a seamless user experience from prompt input through code generation to explanation display and history management.
+### Key Achievements
 
-The emphasis on explanation alongside code generation distinguishes this project from simple code completion tools, providing educational value that supports learning rather than mere task completion. Users gain insight into programming concepts through contextual explanations that accompany each generated code segment.
+1. **Full Multi-Language Support**: Successfully integrated 13 programming languages with cloud-based execution, eliminating the need for local compiler installations.
 
-While the system is subject to limitations inherent in free-tier API usage, it successfully demonstrates that meaningful AI-powered applications can be developed without significant resource investment. The project provides practical experience in full-stack development, API integration, and deployment considerations that are valuable for aspiring software professionals.
+2. **Comprehensive Feature Set**: Implemented code generation, explanation, execution sandbox, conversational refinement, favorites, history, and GitHub Gist integration.
 
-The documented architecture and modular code structure support future enhancements and serve as a foundation for more advanced implementations. The project fulfills its objectives of providing accessible code generation with educational explanations using exclusively free services.
+3. **Zero-Cost Architecture**: Achieved full functionality using exclusively free-tier services (Gemini API, Piston API, MongoDB Atlas M0).
+
+4. **Production-Ready Security**: Implemented language-specific security patterns, JWT authentication, and secure API key management.
+
+5. **Educational Value**: Every code generation includes detailed explanations, supporting learning rather than mere code completion.
+
+The three-tier architecture comprising React frontend (v18.2.0), Flask backend (v3.0.0), and MongoDB database demonstrates practical application of modern web development practices while maintaining accessibility for academic purposes. The modular code structure supports future enhancements and serves as a foundation for more advanced implementations.
 
 ---
 
 ## 16. KEYWORDS
 
-Artificial Intelligence, Code Generation, Natural Language Processing, React.js, Python Flask, MongoDB, Google Gemini API, RESTful API, Web Application, Free-Tier Services, Educational Technology, Full-Stack Development, Explanation Generation, Programming Assistance, JavaScript, NoSQL Database, JWT Authentication, Environment Configuration, API Integration, Component-Based Architecture
+Artificial Intelligence, Code Generation, Natural Language Processing, React.js 18, Python Flask 3.0, MongoDB Atlas, Google Gemini 2.5 Flash API, Piston API, Code Execution Sandbox, RESTful API, Web Application, Free-Tier Services, Educational Technology, Full-Stack Development, Explanation Generation, Multi-Language Support, Monaco Editor, JWT Authentication, GitHub Gist Integration, Component-Based Architecture, Cloud Computing, Online Code Compiler
 
 ---
 
 ## APPENDIX A: API Endpoint Reference
+
+### Authentication Routes (`/api/auth`)
 
 | Method | Endpoint | Description | Authentication |
 |--------|----------|-------------|----------------|
 | POST | /api/auth/register | Register new user | None |
 | POST | /api/auth/login | User login | None |
 | POST | /api/auth/logout | User logout | Required |
+| GET | /api/auth/me | Get current user info | Required |
+
+### Code Generation Routes (`/api/generate`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
 | POST | /api/generate | Generate code with explanation | Required |
+| POST | /api/generate/refine | Refine code via conversation | Required |
+
+### Code Explanation Routes (`/api/explain`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
 | POST | /api/explain | Explain existing code | Required |
+
+### Code Execution Routes (`/api/execute`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| POST | /api/execute | Execute code in sandbox | Required |
+| GET | /api/execute/languages | Get supported languages | None |
+
+### History Routes (`/api/history`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
 | GET | /api/history | Get user's generation history | Required |
-| GET | /api/history/:id | Get specific generation details | Required |
+| GET | /api/history/:id | Get specific generation | Required |
 | DELETE | /api/history/:id | Delete history item | Required |
+| GET | /api/stats | Get user statistics | Required |
+
+### Favorites Routes (`/api/favorites`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| GET | /api/favorites | Get all favorites | Required |
+| POST | /api/favorites | Add to favorites | Required |
+| PUT | /api/favorites/:id | Update favorite | Required |
+| DELETE | /api/favorites/:id | Remove from favorites | Required |
+
+### GitHub Gist Routes (`/api/gist`)
+
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| POST | /api/gist/create | Create GitHub Gist | Required |
+| GET | /api/gist | Get user's Gists | Required |
+| POST | /api/gist/connect | Connect GitHub account | Required |
+| POST | /api/gist/disconnect | Disconnect GitHub | Required |
 
 ---
 
 ## APPENDIX B: Sample API Requests and Responses
 
-**Code Generation Request**:
+### Code Generation Request
+
 ```json
 POST /api/generate
 Authorization: Bearer <jwt_token>
@@ -1258,7 +1400,8 @@ Content-Type: application/json
 }
 ```
 
-**Code Generation Response**:
+### Code Generation Response
+
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1266,10 +1409,136 @@ Content-Type: application/json
 {
     "id": "65a1b2c3d4e5f6g7h8i9j0k1",
     "code": "def is_prime(n):\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True",
-    "explanation": "This function determines whether a given number is prime. A prime number is a natural number greater than 1 that has no positive divisors other than 1 and itself.\n\nThe function works as follows:\n1. First, it checks if the number is less than 2. Since prime numbers must be greater than 1, any number less than 2 returns False.\n2. The function then iterates through potential divisors from 2 up to the square root of n. We only need to check up to the square root because if n has a divisor larger than its square root, it must also have a corresponding divisor smaller than the square root.\n3. If any divisor evenly divides n (i.e., n % i == 0), the function returns False, indicating n is not prime.\n4. If no divisors are found, the function returns True, confirming n is prime.\n\nThis approach is efficient with O(√n) time complexity, making it suitable for checking primality of reasonably large numbers.",
+    "explanation": "This function determines whether a given number is prime...",
     "language": "python"
 }
 ```
+
+### Code Execution Request
+
+```json
+POST /api/execute
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+    "code": "fun main() {\n    println(\"Hello, Kotlin!\")\n}",
+    "language": "kotlin",
+    "input": ""
+}
+```
+
+### Code Execution Response
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "success": true,
+    "output": "Hello, Kotlin!\n",
+    "error": null,
+    "execution_time": 0
+}
+```
+
+### Code Refinement Request
+
+```json
+POST /api/generate/refine
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+    "generation_id": "65a1b2c3d4e5f6g7h8i9j0k1",
+    "message": "Add input validation and handle negative numbers",
+    "conversation_history": []
+}
+```
+
+---
+
+## APPENDIX C: Project File Structure
+
+```
+code-Gen/
+├── README.md
+├── Project_doc.md
+├── backend/
+│   ├── .env                    # Environment variables
+│   ├── requirements.txt        # Python dependencies
+│   ├── run.py                  # Application entry point
+│   ├── venv/                   # Virtual environment
+│   └── app/
+│       ├── __init__.py         # Flask app factory
+│       ├── middleware/
+│       │   └── auth_middleware.py
+│       ├── routes/
+│       │   ├── auth.py         # Authentication endpoints
+│       │   ├── execute.py      # Code execution (Piston API)
+│       │   ├── explain.py      # Code explanation
+│       │   ├── favorites.py    # Favorites management
+│       │   ├── generate.py     # Code generation
+│       │   ├── gist.py         # GitHub Gist integration
+│       │   └── history.py      # History management
+│       └── services/
+│           ├── auth_service.py
+│           ├── db_service.py
+│           └── gemini_service.py
+└── frontend/
+    ├── package.json            # Node.js dependencies
+    ├── public/
+    │   └── index.html
+    └── src/
+        ├── App.js              # Main application
+        ├── App.css             # Styles
+        ├── index.js            # Entry point
+        ├── components/
+        │   ├── Auth/           # Login, Register
+        │   ├── Common/         # Navbar, Loading, Theme
+        │   ├── Editor/         # Monaco Code Editor
+        │   ├── Favorites/      # Favorites management
+        │   ├── Generator/      # Main code generator
+        │   ├── Gist/           # GitHub integration
+        │   ├── History/        # History viewer
+        │   ├── Refinement/     # Conversational refinement
+        │   └── Sandbox/        # Code execution sandbox
+        ├── context/
+        │   ├── AuthContext.js
+        │   ├── FavoritesContext.js
+        │   └── ThemeContext.js
+        └── services/
+            └── api.js          # Axios API client
+```
+
+---
+
+## APPENDIX D: Dependencies
+
+### Backend Dependencies (requirements.txt)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Flask | 3.0.0 | Web framework |
+| flask-cors | 4.0.0 | CORS support |
+| PyJWT | 2.8.0 | JWT authentication |
+| bcrypt | 4.1.2 | Password hashing |
+| pymongo | 4.6.1 | MongoDB driver |
+| google-generativeai | ≥0.5.0 | Gemini API client |
+| requests | 2.31.0 | HTTP client (Piston API) |
+| python-dotenv | 1.0.0 | Environment management |
+| gunicorn | 21.2.0 | Production WSGI server |
+
+### Frontend Dependencies (package.json)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| react | 18.2.0 | UI library |
+| react-dom | 18.2.0 | React DOM rendering |
+| react-router-dom | 6.21.1 | Client-side routing |
+| @monaco-editor/react | 4.7.0 | VS Code-based editor |
+| react-syntax-highlighter | 15.5.0 | Code highlighting |
+| axios | 1.6.2 | HTTP client |
 
 ---
 
