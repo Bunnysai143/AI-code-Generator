@@ -1,13 +1,14 @@
 # AI-Powered Code Generator with Explanation
 
-A full-stack web application that generates code from natural language descriptions using Google's Gemini Free API, with comprehensive explanations.
+A full-stack web application that generates code from natural language descriptions using Google's Gemini Free API, with comprehensive explanations, code execution sandbox, GitHub Gist integration, and conversational refinement.
 
 ## Tech Stack
 
-- **Frontend**: React.js
+- **Frontend**: React.js with Monaco Editor
 - **Backend**: Python Flask
 - **Database**: MongoDB Atlas (Free Tier)
 - **AI Service**: Google Gemini Free API
+- **Code Editor**: Monaco Editor (VS Code's editor)
 
 ## Project Structure
 
@@ -20,7 +21,10 @@ code-Gen/
 │   │   │   ├── auth.py          # Authentication endpoints
 │   │   │   ├── generate.py      # Code generation endpoints
 │   │   │   ├── explain.py       # Code explanation endpoints
-│   │   │   └── history.py       # History endpoints
+│   │   │   ├── history.py       # History endpoints
+│   │   │   ├── favorites.py     # Favorites management
+│   │   │   ├── gist.py          # GitHub Gist integration
+│   │   │   └── execute.py       # Code execution sandbox
 │   │   ├── services/            # Business logic
 │   │   │   ├── auth_service.py  # Authentication logic
 │   │   │   ├── db_service.py    # MongoDB operations
@@ -33,20 +37,30 @@ code-Gen/
 │
 ├── frontend/
 │   ├── public/
-│   │   └── index.html
+│   │   ├── index.html
+│   │   └── manifest.json
 │   ├── src/
 │   │   ├── components/          # React components
 │   │   │   ├── Auth/           # Login, Register
-│   │   │   ├── Common/         # Navbar, Loading, PrivateRoute
+│   │   │   ├── Common/         # Navbar, Loading, PrivateRoute, ThemeToggle
+│   │   │   ├── Editor/         # Monaco Code Editor
+│   │   │   ├── Favorites/      # Favorites management
 │   │   │   ├── Generator/      # Code generator
-│   │   │   └── History/        # History view
-│   │   ├── context/            # React context (Auth)
+│   │   │   ├── Gist/           # GitHub Gist integration
+│   │   │   ├── History/        # History view and details
+│   │   │   ├── Refinement/     # Conversational code refinement
+│   │   │   └── Sandbox/        # Code execution sandbox
+│   │   ├── context/            # React contexts
+│   │   │   ├── AuthContext.js  # Authentication state
+│   │   │   ├── FavoritesContext.js # Favorites state
+│   │   │   └── ThemeContext.js # Dark/Light theme state
 │   │   ├── services/           # API client
 │   │   ├── App.js
 │   │   └── index.js
 │   ├── package.json
 │   └── .env.example
 │
+├── Project_doc.md              # Detailed project documentation
 └── README.md
 ```
 
@@ -145,6 +159,7 @@ The frontend will start at `http://localhost:3000`
 |--------|----------|-------------|
 | POST | `/api/generate` | Generate code from prompt |
 | POST | `/api/explain` | Explain existing code |
+| POST | `/api/generate/refine` | Refine code conversationally |
 | GET | `/api/languages` | Get supported languages |
 
 ### History
@@ -153,6 +168,26 @@ The frontend will start at `http://localhost:3000`
 | GET | `/api/history` | Get user's history |
 | GET | `/api/history/:id` | Get specific generation |
 | DELETE | `/api/history/:id` | Delete generation |
+
+### Favorites
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/favorites` | Get user's favorites |
+| POST | `/api/favorites` | Add to favorites |
+| PUT | `/api/favorites/:id` | Update favorite title |
+| DELETE | `/api/favorites/:id` | Remove from favorites |
+
+### Code Execution (Sandbox)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/execute` | Execute code in sandbox |
+
+### GitHub Gist
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/gist/connect` | Connect GitHub account |
+| POST | `/api/gist/create` | Create a new Gist |
+| GET | `/api/gist/list` | List user's Gists |
 
 ## Supported Languages
 
@@ -192,10 +227,16 @@ REACT_APP_API_URL=http://localhost:5000/api
 
 - **Code Generation**: Generate code from natural language descriptions
 - **Code Explanation**: Get detailed explanations of generated code
+- **Conversational Refinement**: Iteratively improve code through chat-based interactions
+- **Code Execution Sandbox**: Run Python, JavaScript, and TypeScript code directly in the browser
+- **GitHub Gist Integration**: Save and share code snippets directly to GitHub Gist
+- **Favorites System**: Save and organize your best code generations
+- **Monaco Editor**: Professional VS Code-like code editing experience
 - **Multi-Language Support**: 13+ programming languages
+- **Dark/Light Theme**: Toggle between dark and light modes
 - **History Tracking**: Save and revisit previous generations
 - **User Authentication**: Secure user accounts with JWT
-- **Syntax Highlighting**: Beautiful code display
+- **Syntax Highlighting**: Beautiful code display with bracket pair colorization
 - **Copy to Clipboard**: One-click code copying
 - **Responsive Design**: Works on desktop and mobile
 
@@ -203,7 +244,7 @@ REACT_APP_API_URL=http://localhost:5000/api
 
 - Free tier API rate limits apply
 - Generated code quality depends on AI model
-- No code execution (test code in your own environment)
+- Code execution sandbox supports Python, JavaScript, and TypeScript only
 - Requires internet connection
 
 ## License

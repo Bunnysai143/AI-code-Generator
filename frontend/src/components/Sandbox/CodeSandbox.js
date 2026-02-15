@@ -2,7 +2,27 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { executeAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 
-const SUPPORTED_LANGUAGES = ['python', 'javascript', 'typescript'];
+const SUPPORTED_LANGUAGES = [
+  'python', 'javascript', 'typescript', 'java', 'cpp', 'c', 
+  'csharp', 'ruby', 'go', 'php', 'swift', 'kotlin', 'rust'
+];
+
+// Language display names and runtime requirements
+const LANGUAGE_INFO = {
+  python: { name: 'Python', runtime: 'Python 3.x' },
+  javascript: { name: 'JavaScript', runtime: 'Node.js' },
+  typescript: { name: 'TypeScript', runtime: 'ts-node' },
+  java: { name: 'Java', runtime: 'JDK' },
+  cpp: { name: 'C++', runtime: 'g++' },
+  c: { name: 'C', runtime: 'gcc' },
+  csharp: { name: 'C#', runtime: 'dotnet-script' },
+  ruby: { name: 'Ruby', runtime: 'Ruby' },
+  go: { name: 'Go', runtime: 'Go' },
+  php: { name: 'PHP', runtime: 'PHP' },
+  swift: { name: 'Swift', runtime: 'Swift' },
+  kotlin: { name: 'Kotlin', runtime: 'Kotlin' },
+  rust: { name: 'Rust', runtime: 'rustc' }
+};
 
 const CodeSandbox = ({ initialCode = '', language = 'python', onCodeChange }) => {
   const [code, setCode] = useState(initialCode);
@@ -75,12 +95,14 @@ const CodeSandbox = ({ initialCode = '', language = 'python', onCodeChange }) =>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <h3>Execution Not Available</h3>
-          <p>Code execution is currently supported for Python, JavaScript, and TypeScript only.</p>
+          <p>Code execution is not supported for this language.</p>
           <p className="sandbox-language-tag">{language.toUpperCase()}</p>
         </div>
       </div>
     );
   }
+
+  const langInfo = LANGUAGE_INFO[language.toLowerCase()] || { name: language, runtime: 'Unknown' };
 
   return (
     <div className={`sandbox-container ${isDark ? 'dark' : ''}`}>
