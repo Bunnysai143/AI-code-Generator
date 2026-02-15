@@ -28,10 +28,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle token expiration
-      localStorage.removeItem('authToken');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login';
+      // Only redirect to login if it's an auth token issue, not GitHub connection issue
+      const errorData = error.response?.data;
+      const isGithubError = errorData?.github_not_connected || errorData?.error?.includes?.('GitHub');
+      
+      if (!isGithubError) {
+        // Handle token expiration
+        localStorage.removeItem('authToken');
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
@@ -49,6 +55,8 @@ export const authAPI = {
 // Code Generation API
 export const codeAPI = {
   generate: (prompt, language) => api.post('/generate', { prompt, language }),
+  refine: (generationId, message, conversationHistory) => 
+    api.post('/generate/refine', { generation_id: generationId, message, conversation_history: conversationHistory }),
   getLanguages: () => api.get('/languages'),
 };
 
@@ -63,6 +71,28 @@ export const historyAPI = {
   getGeneration: (id) => api.get(`/history/${id}`),
   deleteGeneration: (id) => api.delete(`/history/${id}`),
   getStats: () => api.get('/stats'),
+};
+
+// Favorites API
+export const favoritesAPI = {
+  getFavorites: () => api.get('/favorites'),
+  addFavorite: (generationId, title) => api.post('/favorites', { generation_id: generationId, title }),
+  removeFavorite: (favoriteId) => api.delete(`/favorites/${favoriteId}`),
+  updateFavorite: (favoriteId, data) => api.put(`/favorites/${favoriteId}`, data),
+};
+
+// Gist API
+export const gistAPI = {
+  createGist: (code, language, description, isPublic = false) => 
+    api.post('/gist/create', { code, language, description, is_public: isPublic }),
+  getGists: () => api.get('/gist'),
+  connectGithub: (token) => api.post('/gist/connect', { github_token: token }),
+  disconnectGithub: () => api.post('/gist/disconnect'),
+};
+
+// Code Execution API (for sandbox)
+export const executeAPI = {
+  execute: (code, language, input = '') => api.post('/execute', { code, language, input }),
 };
 
 export default api;

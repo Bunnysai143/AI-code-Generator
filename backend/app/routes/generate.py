@@ -75,6 +75,74 @@ def generate_code(current_user):
         return jsonify({'error': 'An error occurred during code generation'}), 500
 
 
+@generate_bp.route('/generate/refine', methods=['POST'])
+@require_auth
+def refine_code(current_user):
+    """Refine existing code based on user feedback - conversational refinement."""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+    
+    generation_id = data.get('generation_id')
+    message = data.get('message', '').strip()
+    conversation_history = data.get('conversation_history', [])
+    
+    if not generation_id:
+        return jsonify({'error': 'generation_id is required'}), 400
+    
+    if not message:
+        return jsonify({'error': 'Refinement message is required'}), 400
+    
+    if len(message) > 1000:
+        return jsonify({'error': 'Message exceeds maximum length of 1000 characters'}), 400
+    
+    try:
+        # Get the original generation
+        generation = DatabaseService.get_generation_by_id(
+            generation_id=generation_id,
+            user_id=current_user['id']
+        )
+        
+        if not generation:
+            return jsonify({'error': 'Generation not found'}), 404
+        
+        original_code = generation.get('generated_code', '')
+        language = generation.get('language', 'python')
+        original_prompt = generation.get('prompt', '')
+        
+        # Call Gemini API for refinement
+        result = GeminiService.refine_code(
+            original_code=original_code,
+            language=language,
+            refinement_request=message,
+            conversation_history=conversation_history,
+            original_prompt=original_prompt
+        )
+        
+        if not result['success']:
+            return jsonify({'error': result['error']}), 503
+        
+        # Update the generation in database
+        DatabaseService.update_generation_code(
+            generation_id=generation_id,
+            user_id=current_user['id'],
+            new_code=result['code'],
+            refinement_note=message
+        )
+        
+        return jsonify({
+            'code': result['code'],
+            'explanation': result['explanation'],
+            'changes': result.get('changes', []),
+            'generation_id': generation_id
+        }), 200
+        
+    except Exception as e:
+        print(f"Refinement error: {str(e)}")
+        return jsonify({'error': 'An error occurred during code refinement'}), 500
+
+
 @generate_bp.route('/languages', methods=['GET'])
 def get_supported_languages():
     """Get list of supported programming languages."""

@@ -234,3 +234,112 @@ Make the explanation clear and educational, suitable for someone learning to pro
             'code': code,
             'explanation': explanation
         }
+    
+    @classmethod
+    def refine_code(cls, original_code: str, language: str, refinement_request: str,
+                   conversation_history: list = None, original_prompt: str = '') -> Dict[str, Any]:
+        """
+        Refine existing code based on user feedback - conversational refinement.
+        
+        Args:
+            original_code: The current code to refine
+            language: Programming language
+            refinement_request: User's request for changes
+            conversation_history: Previous conversation messages
+            original_prompt: Original generation prompt
+            
+        Returns:
+            Dictionary containing success status, refined code, explanation, and changes list
+        """
+        cls.initialize()
+        
+        # Build conversation context
+        context = ""
+        if conversation_history:
+            for msg in conversation_history[-5:]:  # Limit to last 5 messages
+                role = "User" if msg.get('role') == 'user' else "Assistant"
+                context += f"{role}: {msg.get('content', '')}\n"
+        
+        engineered_prompt = f"""You are an expert programming assistant helping to iteratively refine code.
+
+**Original Request**: {original_prompt}
+
+**Current Code** ({language}):
+```{language}
+{original_code}
+```
+
+**Conversation History**:
+{context if context else "No previous conversation."}
+
+**New Refinement Request**: {refinement_request}
+
+Please refine the code based on the user's request. Provide your response in EXACTLY this format:
+
+**CHANGES:**
+- [List each specific change you made as a bullet point]
+- [Be concise but clear about what was modified]
+
+**CODE:**
+```{language}
+[Your complete refined code here - include the full code, not just changes]
+```
+
+**EXPLANATION:**
+[Explain what changes were made and why. Be concise but helpful.]
+
+IMPORTANT:
+1. Provide the COMPLETE refined code, not just the changes
+2. Maintain the original functionality unless asked to change it
+3. Use only single-line comments in the code
+4. Make sure the code is syntactically correct
+5. If the request doesn't make sense or isn't possible, explain why and suggest alternatives
+"""
+        
+        try:
+            response = cls._model.generate_content(engineered_prompt)
+            
+            if not response or not response.text:
+                return {
+                    'success': False,
+                    'error': 'Empty response received from AI service'
+                }
+            
+            response_text = response.text
+            
+            # Parse the response
+            parsed = cls._parse_response(response_text, language)
+            
+            # Extract changes list
+            changes = []
+            changes_match = re.search(r"\*\*CHANGES:\*\*\s*(.*?)\*\*CODE:", response_text, re.DOTALL | re.IGNORECASE)
+            if changes_match:
+                changes_text = changes_match.group(1).strip()
+                for line in changes_text.split('\n'):
+                    line = line.strip()
+                    if line.startswith('- ') or line.startswith('* '):
+                        changes.append(line[2:].strip())
+            
+            return {
+                'success': True,
+                'code': parsed['code'] if parsed['code'] else original_code,
+                'explanation': parsed['explanation'],
+                'changes': changes
+            }
+            
+        except Exception as e:
+            error_message = str(e)
+            error_lower = error_message.lower()
+            
+            print(f"Gemini API Error (refine): {error_message}")
+            
+            if 'quota' in error_lower or 'rate' in error_lower or '429' in error_message:
+                return {
+                    'success': False,
+                    'error': 'API rate limit reached. Please try again in a few moments.'
+                }
+            
+            return {
+                'success': False,
+                'error': f'Failed to refine code: {error_message}'
+            }

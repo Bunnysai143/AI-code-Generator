@@ -3,7 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { historyAPI } from '../../services/api';
+import { useFavorites } from '../../context/FavoritesContext';
+import { useTheme } from '../../context/ThemeContext';
 import Loading from '../Common/Loading';
+import CodeSandbox from '../Sandbox/CodeSandbox';
+import ConversationalRefinement from '../Refinement/ConversationalRefinement';
+import GistIntegration from '../Gist/GistIntegration';
 
 // Helper function to parse markdown and render as JSX
 const renderMarkdown = (text) => {
@@ -123,11 +128,28 @@ const HistoryDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [generation, setGeneration] = useState(null);
+  const [currentCode, setCurrentCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
+  const [showRefinement, setShowRefinement] = useState(false);
+  const [showGist, setShowGist] = useState(false);
+  
+  const { isDark } = useTheme();
+  const { addFavorite, removeFavorite, isFavorite, getFavoriteByGenerationId } = useFavorites();
 
   useEffect(() => {
+    const fetchGeneration = async () => {
+      try {
+        const response = await historyAPI.getGeneration(id);
+        setGeneration(response.data.generation);
+      } catch (err) {
+        setError('Failed to load generation details');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchGeneration();
   }, [id]);
 
@@ -138,25 +160,41 @@ const HistoryDetail = () => {
     }
   }, [copied]);
 
-  const fetchGeneration = async () => {
-    try {
-      const response = await historyAPI.getGeneration(id);
-      setGeneration(response.data.generation);
-    } catch (err) {
-      setError('Failed to load generation details');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (generation) {
+      setCurrentCode(generation.generated_code);
     }
+  }, [generation]);
+
+  const handleCodeUpdate = (newCode) => {
+    setCurrentCode(newCode);
   };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(generation.generated_code);
+      await navigator.clipboard.writeText(currentCode);
       setCopied(true);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
   };
+
+  const handleFavoriteToggle = async () => {
+    try {
+      if (isFavorite(id)) {
+        const favorite = getFavoriteByGenerationId(id);
+        if (favorite) {
+          await removeFavorite(favorite._id || favorite.favorite_id);
+        }
+      } else {
+        await addFavorite(id, generation.prompt?.substring(0, 100));
+      }
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    }
+  };
+
+  const currentIsFavorite = isFavorite(id);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this generation?')) {
@@ -199,7 +237,7 @@ const HistoryDetail = () => {
   }
 
   return (
-    <div>
+    <div className={isDark ? 'dark-mode' : ''}>
       <div style={{ marginBottom: '1.5rem' }}>
         <Link to="/history" style={{ color: '#4f46e5', textDecoration: 'none' }}>
           ← Back to History
@@ -216,38 +254,83 @@ const HistoryDetail = () => {
               {formatDate(generation.created_at)}
             </span>
           </div>
-          <button className="btn btn-danger" onClick={handleDelete}>
-            Delete
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              className={`btn ${currentIsFavorite ? 'btn-warning' : 'btn-secondary'}`}
+              onClick={handleFavoriteToggle}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={currentIsFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              {currentIsFavorite ? 'Saved' : 'Save'}
+            </button>
+            <button className="btn btn-danger" onClick={handleDelete}>
+              Delete
+            </button>
+          </div>
         </div>
         
-        <h2 style={{ fontSize: '1rem', fontWeight: 500, color: '#374151', marginBottom: '0.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 500, color: isDark ? '#e2e8f0' : '#374151', marginBottom: '0.5rem' }}>
           Prompt:
         </h2>
-        <p style={{ color: '#4b5563', whiteSpace: 'pre-wrap' }}>{generation.prompt}</p>
+        <p style={{ color: isDark ? '#94a3b8' : '#4b5563', whiteSpace: 'pre-wrap' }}>{generation.prompt}</p>
+      </div>
+
+      {/* Action Toolbar */}
+      <div className="action-toolbar" style={{ marginBottom: '1rem' }}>
+        <div className="toolbar-group">
+          <button 
+            className={`toolbar-btn ${showSandbox ? 'active' : ''}`}
+            onClick={() => setShowSandbox(!showSandbox)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Run
+          </button>
+          <button 
+            className={`toolbar-btn ${showRefinement ? 'active' : ''}`}
+            onClick={() => setShowRefinement(!showRefinement)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Refine
+          </button>
+          <button 
+            className={`toolbar-btn ${showGist ? 'active' : ''}`}
+            onClick={() => setShowGist(!showGist)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            Gist
+          </button>
+        </div>
+        <button className="toolbar-btn" onClick={handleCopy}>
+          {copied ? (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Copied!
+            </>
+          ) : (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </>
+          )}
+        </button>
       </div>
 
       <div className="code-output" style={{ marginBottom: '1.5rem' }}>
         <div className="code-header">
           <span className="code-language">{generation.language}</span>
-          <button className="copy-btn" onClick={handleCopy}>
-            {copied ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                Copied!
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                Copy Code
-              </>
-            )}
-          </button>
         </div>
         <div className="code-content">
           <SyntaxHighlighter
@@ -260,10 +343,46 @@ const HistoryDetail = () => {
               fontSize: '0.875rem',
             }}
           >
-            {generation.generated_code}
+            {currentCode}
           </SyntaxHighlighter>
         </div>
       </div>
+
+      {/* Sandbox Panel */}
+      {showSandbox && (
+        <div className="sandbox-panel" style={{ marginBottom: '1.5rem' }}>
+          <CodeSandbox
+            initialCode={currentCode}
+            language={generation.language}
+            onCodeChange={setCurrentCode}
+          />
+        </div>
+      )}
+
+      {/* Refinement Panel */}
+      {showRefinement && (
+        <div className="refinement-panel" style={{ marginBottom: '1.5rem' }}>
+          <ConversationalRefinement
+            generationId={id}
+            initialCode={currentCode}
+            language={generation.language}
+            onCodeUpdate={handleCodeUpdate}
+            onClose={() => setShowRefinement(false)}
+          />
+        </div>
+      )}
+
+      {/* Gist Panel */}
+      {showGist && (
+        <div className="gist-panel" style={{ marginBottom: '1.5rem' }}>
+          <GistIntegration
+            code={currentCode}
+            language={generation.language}
+            description={generation.prompt}
+            onClose={() => setShowGist(false)}
+          />
+        </div>
+      )}
 
       {generation.explanation && (
         <div className="explanation-section">

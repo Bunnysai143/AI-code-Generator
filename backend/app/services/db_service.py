@@ -223,3 +223,154 @@ class DatabaseService:
             'total_generations': total_generations,
             'language_distribution': language_stats
         }
+    
+    # Update generation code (for refinement)
+    @classmethod
+    def update_generation_code(cls, generation_id: str, user_id: str, 
+                               new_code: str, refinement_note: str = '') -> bool:
+        """Update a generation's code after refinement."""
+        db = cls.get_db()
+        
+        result = db.code_generations.update_one(
+            {'_id': ObjectId(generation_id), 'user_id': ObjectId(user_id)},
+            {
+                '$set': {'generated_code': new_code},
+                '$push': {
+                    'refinements': {
+                        'note': refinement_note,
+                        'timestamp': datetime.utcnow()
+                    }
+                }
+            }
+        )
+        return result.modified_count > 0
+    
+    # Favorites Operations
+    @classmethod
+    def add_favorite(cls, user_id: str, generation_id: str, title: str,
+                     language: str = '', prompt_preview: str = '') -> dict:
+        """Add a generation to user's favorites."""
+        db = cls.get_db()
+        
+        favorite_doc = {
+            'user_id': ObjectId(user_id),
+            'generation_id': generation_id,
+            'title': title,
+            'language': language,
+            'prompt_preview': prompt_preview,
+            'created_at': datetime.utcnow()
+        }
+        
+        result = db.favorites.insert_one(favorite_doc)
+        favorite_doc['_id'] = str(result.inserted_id)
+        favorite_doc['user_id'] = str(favorite_doc['user_id'])
+        favorite_doc['favorite_id'] = str(result.inserted_id)
+        
+        return favorite_doc
+    
+    @classmethod
+    def get_user_favorites(cls, user_id: str) -> list:
+        """Get user's favorite generations."""
+        db = cls.get_db()
+        
+        favorites = list(db.favorites.find(
+            {'user_id': ObjectId(user_id)}
+        ).sort('created_at', -1))
+        
+        for fav in favorites:
+            fav['_id'] = str(fav['_id'])
+            fav['user_id'] = str(fav['user_id'])
+            fav['favorite_id'] = str(fav['_id'])
+        
+        return favorites
+    
+    @classmethod
+    def get_favorite_by_generation(cls, user_id: str, generation_id: str) -> dict:
+        """Get a favorite by generation ID."""
+        db = cls.get_db()
+        return db.favorites.find_one({
+            'user_id': ObjectId(user_id),
+            'generation_id': generation_id
+        })
+    
+    @classmethod
+    def update_favorite(cls, favorite_id: str, user_id: str, title: str) -> bool:
+        """Update a favorite's title."""
+        db = cls.get_db()
+        result = db.favorites.update_one(
+            {'_id': ObjectId(favorite_id), 'user_id': ObjectId(user_id)},
+            {'$set': {'title': title}}
+        )
+        return result.modified_count > 0
+    
+    @classmethod
+    def remove_favorite(cls, favorite_id: str, user_id: str) -> bool:
+        """Remove a favorite."""
+        db = cls.get_db()
+        result = db.favorites.delete_one({
+            '_id': ObjectId(favorite_id),
+            'user_id': ObjectId(user_id)
+        })
+        return result.deleted_count > 0
+    
+    # GitHub/Gist Operations
+    @classmethod
+    def save_github_token(cls, user_id: str, github_token: str, github_username: str = ''):
+        """Save user's GitHub token."""
+        db = cls.get_db()
+        db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': {
+                'github_token': github_token,
+                'github_username': github_username,
+                'github_connected_at': datetime.utcnow()
+            }}
+        )
+    
+    @classmethod
+    def get_user_github_token(cls, user_id: str) -> str:
+        """Get user's GitHub token."""
+        db = cls.get_db()
+        user = db.users.find_one({'_id': ObjectId(user_id)}, {'github_token': 1})
+        return user.get('github_token') if user else None
+    
+    @classmethod
+    def remove_github_token(cls, user_id: str):
+        """Remove user's GitHub token."""
+        db = cls.get_db()
+        db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$unset': {'github_token': '', 'github_username': '', 'github_connected_at': ''}}
+        )
+    
+    @classmethod
+    def save_gist_reference(cls, user_id: str, gist_id: str, html_url: str,
+                           description: str = '', language: str = ''):
+        """Save a reference to a created gist."""
+        db = cls.get_db()
+        
+        gist_doc = {
+            'user_id': ObjectId(user_id),
+            'gist_id': gist_id,
+            'html_url': html_url,
+            'description': description,
+            'language': language,
+            'created_at': datetime.utcnow()
+        }
+        
+        db.gists.insert_one(gist_doc)
+    
+    @classmethod
+    def get_user_gists(cls, user_id: str) -> list:
+        """Get user's created gists."""
+        db = cls.get_db()
+        
+        gists = list(db.gists.find(
+            {'user_id': ObjectId(user_id)}
+        ).sort('created_at', -1))
+        
+        for gist in gists:
+            gist['_id'] = str(gist['_id'])
+            gist['user_id'] = str(gist['user_id'])
+        
+        return gists

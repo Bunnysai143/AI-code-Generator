@@ -27,11 +27,17 @@ def create_app():
     from app.routes.generate import generate_bp
     from app.routes.history import history_bp
     from app.routes.explain import explain_bp
+    from app.routes.favorites import favorites_bp
+    from app.routes.gist import gist_bp
+    from app.routes.execute import execute_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(generate_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(explain_bp)
+    app.register_blueprint(favorites_bp)
+    app.register_blueprint(gist_bp)
+    app.register_blueprint(execute_bp)
     
     # Error handlers
     @app.errorhandler(400)
