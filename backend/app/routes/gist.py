@@ -5,7 +5,6 @@ from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import require_auth
 from app.services.db_service import DatabaseService
 import requests
-import os
 
 gist_bp = Blueprint('gist', __name__, url_prefix='/api/gist')
 
@@ -43,15 +42,11 @@ def create_gist(current_user):
     if not code:
         return jsonify({'error': 'Code is required'}), 400
     
-    # Get user's GitHub token
+    # Get user's GitHub token (user must connect their own GitHub account)
     github_token = DatabaseService.get_user_github_token(current_user['id'])
     
     if not github_token:
-        # Use app-level token if available
-        github_token = os.getenv('GITHUB_GIST_TOKEN')
-    
-    if not github_token:
-        return jsonify({'error': 'GitHub not connected. Please connect your GitHub account.', 'github_not_connected': True}), 400
+        return jsonify({'error': 'GitHub not connected. Please connect your GitHub account from the navbar.', 'github_not_connected': True}), 400
     
     try:
         # Prepare gist data
@@ -106,9 +101,15 @@ def create_gist(current_user):
             error_msg = response.json().get('message', 'Failed to create gist')
             return jsonify({'error': error_msg}), response.status_code
             
+    except requests.ConnectionError as e:
+        print(f"Gist connection error: {str(e)}")
+        return jsonify({'error': 'Failed to connect to GitHub. Please check your internet connection.'}), 503
+    except requests.Timeout as e:
+        print(f"Gist timeout error: {str(e)}")
+        return jsonify({'error': 'GitHub request timed out. Please try again.'}), 504
     except requests.RequestException as e:
         print(f"Gist creation error: {str(e)}")
-        return jsonify({'error': 'Failed to connect to GitHub'}), 503
+        return jsonify({'error': f'Failed to connect to GitHub: {str(e)}'}), 503
     except Exception as e:
         print(f"Gist creation error: {str(e)}")
         return jsonify({'error': 'Failed to create gist'}), 500
@@ -181,3 +182,34 @@ def disconnect_github(current_user):
     except Exception as e:
         print(f"GitHub disconnect error: {str(e)}")
         return jsonify({'error': 'Failed to disconnect GitHub'}), 500
+
+
+@gist_bp.route('/status', methods=['GET'])
+@require_auth
+def github_status(current_user):
+    """Check if user has GitHub connected and return status."""
+    try:
+        github_token = DatabaseService.get_user_github_token(current_user['id'])
+        
+        if not github_token:
+            return jsonify({
+                'connected': False,
+                'github_username': None
+            }), 200
+        
+        # Get stored username from DB
+        db = DatabaseService.get_db()
+        user = db.users.find_one(
+            {'_id': __import__('bson').ObjectId(current_user['id'])},
+            {'github_username': 1}
+        )
+        github_username = user.get('github_username', '') if user else ''
+        
+        return jsonify({
+            'connected': True,
+            'github_username': github_username
+        }), 200
+        
+    except Exception as e:
+        print(f"GitHub status error: {str(e)}")
+        return jsonify({'connected': False, 'github_username': None}), 200

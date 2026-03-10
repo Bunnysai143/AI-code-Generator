@@ -1,6 +1,6 @@
 """
 Code Execution Routes - Sandbox for testing generated code
-Uses Piston API for online code execution (supports 50+ languages)
+ Uses Judge0 API for online code execution (supports 50+ languages)
 """
 from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import require_auth
@@ -14,24 +14,24 @@ import requests
 
 execute_bp = Blueprint('execute', __name__, url_prefix='/api')
 
-# Piston API endpoint (free, no API key required)
-PISTON_API_URL = "https://emkc.org/api/v2/piston/execute"
+# Judge0 API endpoint (local Docker instance)
+JUDGE0_API_URL = "http://localhost:2358"
 
-# Language mapping for Piston API (language name -> piston language id and version)
-PISTON_LANGUAGES = {
-    'python': {'language': 'python', 'version': '3.10.0'},
-    'javascript': {'language': 'javascript', 'version': '18.15.0'},
-    'typescript': {'language': 'typescript', 'version': '5.0.3'},
-    'java': {'language': 'java', 'version': '15.0.2'},
-    'cpp': {'language': 'c++', 'version': '10.2.0'},
-    'c': {'language': 'c', 'version': '10.2.0'},
-    'csharp': {'language': 'csharp', 'version': '6.12.0'},
-    'ruby': {'language': 'ruby', 'version': '3.0.1'},
-    'go': {'language': 'go', 'version': '1.16.2'},
-    'php': {'language': 'php', 'version': '8.2.3'},
-    'swift': {'language': 'swift', 'version': '5.3.3'},
-    'kotlin': {'language': 'kotlin', 'version': '1.8.20'},
-    'rust': {'language': 'rust', 'version': '1.68.2'},
+# Language mapping for Judge0 API (language name -> Judge0 language_id)
+JUDGE0_LANGUAGES = {
+    'python': 71,       # Python (3.8.1)
+    'javascript': 63,   # JavaScript (Node.js 12.14.0)
+    'typescript': 74,   # TypeScript (3.7.4)
+    'java': 62,         # Java (OpenJDK 13.0.1)
+    'cpp': 54,          # C++ (GCC 9.2.0)
+    'c': 50,            # C (GCC 9.2.0)
+    'csharp': 51,       # C# (Mono 6.6.0.161)
+    'ruby': 72,         # Ruby (2.7.0)
+    'go': 60,           # Go (1.13.5)
+    'php': 68,          # PHP (7.4.1)
+    'swift': 83,        # Swift (5.2.3)
+    'kotlin': 78,       # Kotlin (1.3.70)
+    'rust': 73,         # Rust (1.40.0)
 }
 
 # Supported languages for execution
@@ -153,78 +153,93 @@ def run_with_timeout(process, timeout):
     return result
 
 
-def execute_with_piston(code, language, stdin=''):
-    """Execute code using Piston API (online code execution)."""
-    if language not in PISTON_LANGUAGES:
-        return None, f'Language {language} not supported by Piston API'
+def execute_with_judge0(code, language, stdin=''):
+    """Execute code using Judge0 API (local Docker instance)."""
+    if language not in JUDGE0_LANGUAGES:
+        return None, f'Language {language} not supported by Judge0 API'
     
-    piston_config = PISTON_LANGUAGES[language]
+    language_id = JUDGE0_LANGUAGES[language]
     
     payload = {
-        'language': piston_config['language'],
-        'version': piston_config['version'],
-        'files': [
-            {
-                'name': f'main{SUPPORTED_LANGUAGES[language]["extension"]}',
-                'content': code
-            }
-        ],
-        'stdin': stdin,
-        'compile_timeout': 15000,
-        'run_timeout': 15000,
-        'compile_memory_limit': -1,
-        'run_memory_limit': -1
+        'language_id': language_id,
+        'source_code': code,
+        'stdin': stdin or ''
     }
     
     try:
-        print(f"[Piston] Executing {language} code...")
+        print(f"[Judge0] Executing {language} code (language_id={language_id})...")
+        
         response = requests.post(
-            PISTON_API_URL,
+            f"{JUDGE0_API_URL}/submissions/?base64_encoded=false&wait=true",
             json=payload,
             timeout=60,
             headers={'Content-Type': 'application/json'}
         )
         
-        print(f"[Piston] Response status: {response.status_code}")
+        print(f"[Judge0] Response status: {response.status_code}")
         
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             result = response.json()
-            print(f"[Piston] Result: {result}")
+            print(f"[Judge0] Result: {result}")
             
-            # Handle compilation errors
-            compile_result = result.get('compile')
-            if compile_result:
-                compile_stderr = compile_result.get('stderr', '')
-                compile_code = compile_result.get('code', 0)
-                if compile_code != 0 or compile_stderr:
-                    return {
-                        'success': False,
-                        'output': compile_result.get('stdout', ''),
-                        'error': f"Compilation error:\n{compile_stderr}" if compile_stderr else "Compilation failed",
-                        'execution_time': 0
-                    }, None
+            status = result.get('status', {})
+            status_id = status.get('id', 0)
+            stdout = result.get('stdout') or ''
+            stderr = result.get('stderr') or ''
+            compile_output = result.get('compile_output') or ''
+            execution_time = float(result.get('time') or 0)
             
-            # Get run results
-            run_result = result.get('run', {})
-            stdout = run_result.get('stdout', '')
-            stderr = run_result.get('stderr', '')
-            exit_code = run_result.get('code', 0)
+            # Status 6 = Compilation Error
+            if status_id == 6:
+                return {
+                    'success': False,
+                    'output': '',
+                    'error': f"Compilation error:\n{compile_output}" if compile_output else "Compilation failed",
+                    'execution_time': execution_time
+                }, None
             
+            # Status 5 = Time Limit Exceeded
+            if status_id == 5:
+                return {
+                    'success': False,
+                    'output': stdout[:MAX_OUTPUT_SIZE],
+                    'error': 'Execution timed out',
+                    'execution_time': execution_time
+                }, None
+            
+            # Status 13 = Internal Error (sandbox/isolate failure)
+            if status_id == 13:
+                message = result.get('message') or ''
+                print(f"[Judge0] Internal Error: {message}")
+                return None, f'Judge0 sandbox error: {message}. The Judge0 sandbox (isolate) may not be configured correctly.'
+            
+            # Status 3 = Accepted (successful execution)
+            # Status 4 = Wrong Answer (still ran successfully)
+            if status_id == 3:
+                return {
+                    'success': True,
+                    'output': stdout[:MAX_OUTPUT_SIZE],
+                    'error': stderr[:MAX_OUTPUT_SIZE] if stderr else None,
+                    'execution_time': execution_time
+                }, None
+            
+            # Status 7-12 = Runtime errors
+            error_msg = stderr or compile_output or status.get('description', 'Execution failed')
             return {
-                'success': exit_code == 0,
-                'output': stdout[:MAX_OUTPUT_SIZE] if stdout else '',
-                'error': stderr[:MAX_OUTPUT_SIZE] if stderr else None,
-                'execution_time': 0
+                'success': False,
+                'output': stdout[:MAX_OUTPUT_SIZE],
+                'error': error_msg[:MAX_OUTPUT_SIZE],
+                'execution_time': execution_time
             }, None
         else:
-            print(f"[Piston] Error response: {response.text}")
-            return None, f'Piston API error: {response.status_code}'
+            print(f"[Judge0] Error response: {response.text}")
+            return None, f'Judge0 API error: {response.status_code}'
             
     except requests.exceptions.Timeout:
-        print("[Piston] Request timed out")
+        print("[Judge0] Request timed out")
         return None, 'Code execution timed out'
     except requests.exceptions.RequestException as e:
-        return None, f'API request failed: {str(e)}'
+        return None, f'Judge0 API request failed: {str(e)}'
 
 
 @execute_bp.route('/execute', methods=['POST'])
@@ -337,16 +352,16 @@ def execute_code(current_user):
     
     lang_config = SUPPORTED_LANGUAGES[language]
     
-    # Languages that should use Piston API (compiled languages or those without local runtime)
-    use_piston_languages = ['java', 'cpp', 'c', 'csharp', 'ruby', 'go', 'php', 'swift', 'kotlin', 'rust']
+    # Languages that should use Judge0 API (compiled languages or those without local runtime)
+    use_judge0_languages = ['java', 'cpp', 'c', 'csharp', 'ruby', 'go', 'php', 'swift', 'kotlin', 'rust']
     
-    # Try Piston API for languages that typically need compilation or lack local runtime
-    if language in use_piston_languages:
-        piston_result, piston_error = execute_with_piston(code, language, user_input)
-        if piston_result:
-            return jsonify(piston_result), 200
-        # If Piston fails, try local execution as fallback
-        print(f"Piston API failed for {language}: {piston_error}, trying local execution...")
+    # Try Judge0 API for languages that typically need compilation or lack local runtime
+    if language in use_judge0_languages:
+        judge0_result, judge0_error = execute_with_judge0(code, language, user_input)
+        if judge0_result:
+            return jsonify(judge0_result), 200
+        # If Judge0 fails, try local execution as fallback
+        print(f"Judge0 API failed for {language}: {judge0_error}, trying local execution...")
     
     # Local execution for Python, JavaScript, TypeScript, or as fallback
     temp_files = []  # Track all temp files for cleanup
@@ -516,24 +531,24 @@ def execute_code(current_user):
             }), 200
                 
     except FileNotFoundError as e:
-        # Local runtime not available, try Piston API as fallback
-        print(f"Local runtime not found for {language}, trying Piston API...")
-        piston_result, piston_error = execute_with_piston(code, language, user_input)
-        if piston_result:
-            return jsonify(piston_result), 200
+        # Local runtime not available, try Judge0 API as fallback
+        print(f"Local runtime not found for {language}, trying Judge0 API...")
+        judge0_result, judge0_error = execute_with_judge0(code, language, user_input)
+        if judge0_result:
+            return jsonify(judge0_result), 200
         return jsonify({
-            'error': f'Runtime for {language} is not available locally, and online execution failed. Error: {piston_error}'
+            'error': f'Runtime for {language} is not available locally, and Judge0 execution failed. Error: {judge0_error}'
         }), 503
     except subprocess.TimeoutExpired:
         return jsonify({
             'success': False,
+            'output': '',
             'error': 'Compilation timed out',
             'execution_time': 0
         }), 200
     except Exception as e:
         print(f"Execution error: {str(e)}")
         return jsonify({
-            'success': False,
             'error': f'Execution error: {str(e)}'
         }), 500
     finally:

@@ -74,7 +74,11 @@ const GistIntegration = ({ code, language, description = '', onSuccess, onClose 
         onSuccess(response.data.gist);
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Failed to create gist.';
+      let errorMsg = err.response?.data?.error || 'Failed to create gist.';
+      // If no response at all, it's likely a network/backend issue
+      if (!err.response) {
+        errorMsg = 'Cannot reach the server. Make sure the backend is running.';
+      }
       setError(errorMsg);
       // Check if it's a connection error
       if (errorMsg.includes('GitHub not connected') || errorMsg.includes('connect your GitHub')) {

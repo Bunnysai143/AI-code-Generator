@@ -66,7 +66,11 @@ const CodeSandbox = ({ initialCode = '', language = 'python', onCodeChange }) =>
         setError(response.data.error || 'Execution failed');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to execute code. Server may be unavailable.');
+      let errorMsg = err.response?.data?.error || 'Failed to execute code. Server may be unavailable.';
+      if (!err.response) {
+        errorMsg = 'Cannot reach the server. Make sure the backend is running.';
+      }
+      setError(errorMsg);
     } finally {
       setIsRunning(false);
     }
