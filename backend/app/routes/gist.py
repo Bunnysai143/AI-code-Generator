@@ -46,7 +46,7 @@ def create_gist(current_user):
     github_token = DatabaseService.get_user_github_token(current_user['id'])
     
     if not github_token:
-        return jsonify({'error': 'GitHub not connected. Please connect your GitHub account from the navbar.', 'github_not_connected': True}), 400
+        return jsonify({'error': 'GitHub not connected. Please connect your GitHub account using a Personal Access Token. Note: You need to connect on each device you use.', 'github_not_connected': True}), 400
     
     try:
         # Prepare gist data

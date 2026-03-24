@@ -147,17 +147,18 @@ const Generator = () => {
   const [generatedCode, setGeneratedCode] = useState('');
   const [editableCode, setEditableCode] = useState('');
   const [explanation, setExplanation] = useState('');
+  const [sampleInput, setSampleInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [generationId, setGenerationId] = useState(null);
-  
+
   // Feature panels
   const [showEditor, setShowEditor] = useState(false);
   const [showSandbox, setShowSandbox] = useState(false);
   const [showRefinement, setShowRefinement] = useState(false);
   const [showGist, setShowGist] = useState(false);
-  
+
   const { isDark } = useTheme();
   const { addFavorite, removeFavorite, isFavorite, getFavoriteByGenerationId } = useFavorites();
 
@@ -190,6 +191,7 @@ const Generator = () => {
     setGeneratedCode('');
     setEditableCode('');
     setExplanation('');
+    setSampleInput('');
     setGenerationId(null);
     setShowEditor(false);
     setShowSandbox(false);
@@ -201,6 +203,7 @@ const Generator = () => {
       setGeneratedCode(response.data.code);
       setEditableCode(response.data.code);
       setExplanation(response.data.explanation);
+      setSampleInput(response.data.sample_input || '');
       setGenerationId(response.data.id);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate code. Please try again.');
@@ -490,6 +493,7 @@ const Generator = () => {
                   <CodeSandbox
                     initialCode={editableCode}
                     language={language}
+                    sampleInput={sampleInput}
                     onCodeChange={setEditableCode}
                   />
                 </div>

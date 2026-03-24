@@ -24,9 +24,9 @@ const LANGUAGE_INFO = {
   rust: { name: 'Rust', runtime: 'rustc' }
 };
 
-const CodeSandbox = ({ initialCode = '', language = 'python', onCodeChange }) => {
+const CodeSandbox = ({ initialCode = '', language = 'python', sampleInput = '', onCodeChange }) => {
   const [code, setCode] = useState(initialCode);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(sampleInput);
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -36,6 +36,13 @@ const CodeSandbox = ({ initialCode = '', language = 'python', onCodeChange }) =>
   useEffect(() => {
     setCode(initialCode);
   }, [initialCode]);
+
+  useEffect(() => {
+    // Update input when sampleInput changes and input is empty or matches previous sample
+    if (sampleInput) {
+      setInput(sampleInput);
+    }
+  }, [sampleInput]);
 
   const isSupported = SUPPORTED_LANGUAGES.includes(language.toLowerCase());
 

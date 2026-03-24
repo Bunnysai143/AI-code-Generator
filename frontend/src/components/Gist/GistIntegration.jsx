@@ -189,6 +189,9 @@ const GistIntegration = ({ code, language, description = '', onSuccess, onClose 
             </svg>
             <h3>Connect Your GitHub Account</h3>
             <p>To create gists, you need to connect your GitHub account using a Personal Access Token.</p>
+            <p style={{ fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '0.5rem' }}>
+              <strong>Note:</strong> You need to connect GitHub on each device you use. Your token is stored securely with your account.
+            </p>
           </div>
 
           <div className="connect-instructions">

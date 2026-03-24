@@ -66,6 +66,7 @@ def generate_code(current_user):
             'id': generation_id,
             'code': result['code'],
             'explanation': result['explanation'],
+            'sample_input': result.get('sample_input', ''),
             'language': language,
             'prompt': prompt
         }), 200

@@ -129,27 +129,28 @@ MAX_OUTPUT_SIZE = 50000
 MAX_EXECUTION_TIME = 10
 
 
-def run_with_timeout(process, timeout):
+def run_with_timeout(process, timeout, stdin_input=''):
     """Run process with timeout and return output."""
     result = {'stdout': '', 'stderr': '', 'timed_out': False}
-    
+
     def target():
         try:
-            stdout, stderr = process.communicate()
+            # Pass stdin input to the process
+            stdout, stderr = process.communicate(input=stdin_input if stdin_input else None)
             result['stdout'] = stdout
             result['stderr'] = stderr
         except Exception as e:
             result['stderr'] = str(e)
-    
+
     thread = threading.Thread(target=target)
     thread.start()
     thread.join(timeout)
-    
+
     if thread.is_alive():
         process.kill()
         thread.join()
         result['timed_out'] = True
-    
+
     return result
 
 
@@ -497,7 +498,7 @@ def execute_code(current_user):
             env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}
         )
         
-        result = run_with_timeout(process, lang_config['timeout'])
+        result = run_with_timeout(process, lang_config['timeout'], user_input)
         
         execution_time = time.time() - start_time
         

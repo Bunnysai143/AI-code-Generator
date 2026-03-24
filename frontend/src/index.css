@@ -1812,6 +1812,31 @@ select:focus-visible {
   border-color: #334155;
 }
 
+[data-theme='dark'] .explanation-content {
+  color: #d1d5db;
+}
+
+[data-theme='dark'] .explanation-content h4 {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .explanation-content p {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .explanation-content li {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .explanation-content code {
+  background: #374151;
+  color: #f472b6;
+}
+
+[data-theme='dark'] .explanation-content strong {
+  color: #e2e8f0;
+}
+
 [data-theme='dark'] .history-item,
 [data-theme='dark'] .favorite-item {
   background: #1e293b;

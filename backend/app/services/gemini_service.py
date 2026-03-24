@@ -58,6 +58,13 @@ Please provide your response in EXACTLY this format:
 [Your generated code here]
 ```
 
+**SAMPLE_INPUT:**
+[Provide sample test input(s) that can be used to test the code.
+- For programs that read from stdin, provide the exact input values separated by newlines
+- For functions, show example function calls with arguments
+- For algorithms, provide test cases with expected outputs
+- If no input is needed, write "No input required"]
+
 **EXPLANATION:**
 [Provide a comprehensive detailed explanation of the code including:
 - What the code does overall
@@ -72,6 +79,14 @@ IMPORTANT CODE REQUIREMENTS:
 3. Keep inline comments brief - the detailed explanation goes in the EXPLANATION section
 4. Code must be syntactically correct and follow best practices for {language}
 5. Code should be complete and runnable where possible
+6. For Java code, the main class MUST be named "Main" (capital M)
+7. Include proper input handling (Scanner for Java, input() for Python, etc.) when the code needs user input
+8. CRITICAL: Always include example/test code at the end that demonstrates the function in action:
+   - For Python: Add a main block with print statements showing the function being called with sample inputs
+   - For JavaScript/TypeScript: Add console.log statements calling the function with test values
+   - For Java: Include a main method that calls and prints results
+   - For other languages: Include appropriate test code that prints output
+   - This ensures users see output when they run the code
 """
         
         try:
@@ -89,7 +104,8 @@ IMPORTANT CODE REQUIREMENTS:
             return {
                 'success': True,
                 'code': parsed['code'],
-                'explanation': parsed['explanation']
+                'explanation': parsed['explanation'],
+                'sample_input': parsed.get('sample_input', '')
             }
             
         except Exception as e:
@@ -182,14 +198,15 @@ Make the explanation clear and educational, suitable for someone learning to pro
     
     @classmethod
     def _parse_response(cls, response_text: str, language: str) -> Dict[str, str]:
-        """Parse the AI response to extract code and explanation segments."""
+        """Parse the AI response to extract code, sample_input, and explanation segments."""
         code = ""
         explanation = ""
-        
+        sample_input = ""
+
         # Try to extract code block with regex
         code_pattern = rf"```(?:{language})?\s*\n(.*?)```"
         code_matches = re.findall(code_pattern, response_text, re.DOTALL | re.IGNORECASE)
-        
+
         if code_matches:
             code = code_matches[0].strip()
         else:
@@ -205,7 +222,23 @@ Make the explanation clear and educational, suitable for someone learning to pro
                         code = '\n'.join(lines[1:]).strip()
                     else:
                         code = code_block.strip()
-        
+
+        # Extract sample input
+        sample_input_patterns = [
+            r"\*\*SAMPLE_INPUT:\*\*\s*(.*?)(?=\*\*EXPLANATION:|\*\*Explanation:|$)",
+            r"SAMPLE_INPUT:\s*(.*?)(?=\*\*EXPLANATION:|\*\*Explanation:|EXPLANATION:|Explanation:|$)",
+            r"\*\*Sample Input:\*\*\s*(.*?)(?=\*\*EXPLANATION:|\*\*Explanation:|$)",
+        ]
+
+        for pattern in sample_input_patterns:
+            match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+            if match:
+                sample_input = match.group(1).strip()
+                # Clean up the sample input - remove markdown formatting
+                sample_input = re.sub(r'^[\-\*]\s*', '', sample_input, flags=re.MULTILINE)
+                sample_input = sample_input.strip()
+                break
+
         # Extract explanation
         explanation_patterns = [
             r"\*\*EXPLANATION:\*\*\s*(.*)",
@@ -213,26 +246,27 @@ Make the explanation clear and educational, suitable for someone learning to pro
             r"\*\*Explanation:\*\*\s*(.*)",
             r"Explanation:\s*(.*)"
         ]
-        
+
         for pattern in explanation_patterns:
             match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
             if match:
                 explanation = match.group(1).strip()
                 break
-        
+
         # Fallback: use text after the last code block as explanation
         if not explanation and "```" in response_text:
             last_code_end = response_text.rfind("```")
             if last_code_end != -1:
                 explanation = response_text[last_code_end + 3:].strip()
-        
+
         # If still no explanation, use everything except the code block
         if not explanation:
             explanation = response_text.strip()
-        
+
         return {
             'code': code,
-            'explanation': explanation
+            'explanation': explanation,
+            'sample_input': sample_input
         }
     
     @classmethod

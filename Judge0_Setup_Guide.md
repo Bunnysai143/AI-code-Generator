@@ -2,6 +2,22 @@
 
 This guide explains how to set up the Judge0 code execution engine to work with the Code-Gen application on **Windows (Docker Desktop + WSL2)**.
 
+## Quick Start (TL;DR)
+
+After `docker-compose up -d`, run the setup script on **BOTH** containers:
+
+```powershell
+cd "C:\Users\Sai kiran\Desktop\jud\judge0"
+docker cp setup-isolate-v2.sh judge0-worker-1:/tmp/setup-isolate-v2.sh
+docker exec --user root judge0-worker-1 bash /tmp/setup-isolate-v2.sh
+docker cp setup-isolate-v2.sh judge0-server-1:/tmp/setup-isolate-v2.sh
+docker exec --user root judge0-server-1 bash /tmp/setup-isolate-v2.sh
+```
+
+Then test: `python backend/test_all_languages.py`
+
+---
+
 ## Why This Setup Is Needed
 
 Judge0 uses a sandbox tool called **isolate** to run code safely. The version bundled with Judge0 (v1.8.1) only supports **cgroups v1**, but Docker Desktop on Windows/WSL2 uses **cgroups v2**. This causes languages like Java, Go, Kotlin, and TypeScript to fail.
@@ -151,7 +167,9 @@ Wait ~30 seconds for services to start.
 
 ## Step 3: Run the Isolate v2.0 Setup Script
 
-This is the critical step. You need to run a setup script **inside both the server and worker containers**.
+This is the critical step. You need to run a setup script **inside BOTH the server AND worker containers**.
+
+> ⚠️ **IMPORTANT:** You must run the setup on BOTH containers! The server handles `wait=true` requests, the worker handles async requests. Missing either will cause errors.
 
 ### Save this script as `setup-isolate-v2.sh` in your Judge0 directory:
 
@@ -239,19 +257,19 @@ echo ""
 echo "===== Setup Complete ====="
 ```
 
-### Run the script on both containers:
+### Run the script on BOTH containers:
 
 ```powershell
-# Copy script to worker and run it
+# 1. Copy script to WORKER and run it
 docker cp setup-isolate-v2.sh judge0-worker-1:/tmp/setup-isolate-v2.sh
 docker exec --user root judge0-worker-1 bash /tmp/setup-isolate-v2.sh
 
-# Copy script to server and run it  
+# 2. Copy script to SERVER and run it (DON'T SKIP THIS!)
 docker cp setup-isolate-v2.sh judge0-server-1:/tmp/setup-isolate-v2.sh
 docker exec --user root judge0-server-1 bash /tmp/setup-isolate-v2.sh
 ```
 
-You should see **"Sandbox test: PASS"** for both containers.
+You should see **"Sandbox test: PASS"** (or the path `/var/local/lib/isolate/0`) for both containers.
 
 > **Note:** The first run will take ~1 minute to compile isolate from source. Subsequent runs (after restart) are faster because the binary persists in the container layer — only the cgroup setup needs to be redone.
 
@@ -330,6 +348,93 @@ docker cp setup-isolate-v2.sh judge0-worker-1:/tmp/setup-isolate-v2.sh; docker e
 ### "Sandbox test: FAIL" in setup script
 - Make sure containers have `privileged: true` in docker-compose.yml
 - Check Docker Desktop is using WSL2 backend
+
+### ERROR: `No such file or directory @ rb_sysopen - /box/script.py`
+
+This is the most common error. It means isolate setup is missing or incomplete.
+
+**Cause:** The setup script was NOT run on BOTH containers (server AND worker).
+
+**Fix:**
+```powershell
+cd "C:\Users\Sai kiran\Desktop\jud\judge0"
+
+# Run on WORKER container
+docker cp setup-isolate-v2.sh judge0-worker-1:/tmp/setup-isolate-v2.sh
+docker exec --user root judge0-worker-1 bash /tmp/setup-isolate-v2.sh
+
+# Run on SERVER container (IMPORTANT - often missed!)
+docker cp setup-isolate-v2.sh judge0-server-1:/tmp/setup-isolate-v2.sh
+docker exec --user root judge0-server-1 bash /tmp/setup-isolate-v2.sh
+```
+
+> **Why both?** When `wait=true` is used in API calls, the job runs in the SERVER container. When `wait=false`, it runs in the WORKER container. Both need isolate v2.0 configured.
+
+### ERROR: `Failed to create control group /sys/fs/cgroup/memory/box-X/`
+
+**Cause:** Using isolate v1.8.1 which doesn't support cgroups v2.
+
+**Fix:** Run the setup script to upgrade to isolate v2.0:
+```powershell
+docker exec --user root judge0-server-1 bash /tmp/setup-isolate-v2.sh
+docker exec --user root judge0-worker-1 bash /tmp/setup-isolate-v2.sh
+```
+
+### ERROR: `container is not running`
+
+**Cause:** Docker containers are stopped.
+
+**Fix:**
+```powershell
+cd "C:\Users\Sai kiran\Desktop\jud\judge0"
+docker-compose up -d
+# Wait 15 seconds, then run setup on both containers
+```
+
+### ERROR: `isolate: command not found` or `isolate version 1.8.1`
+
+**Cause:** The isolate v2.0 wrapper is not installed or was overwritten.
+
+**Fix:** Re-run the setup script:
+```powershell
+docker exec --user root judge0-worker-1 bash /tmp/setup-isolate-v2.sh
+docker exec --user root judge0-server-1 bash /tmp/setup-isolate-v2.sh
+```
+
+**Verify fix:**
+```powershell
+docker exec judge0-worker-1 isolate --version
+# Should show: The process isolator 2.0
+```
+
+### ERROR: `getcwd: cannot access parent directories` (but shows PASS)
+
+**Cause:** Cosmetic shell error, can be ignored if it still shows the box path.
+
+**This is OK:**
+```
+Sandbox test: FAIL (shell-init: error retrieving current directory: getcwd: cannot access parent directories
+/var/local/lib/isolate/0)
+```
+The important part is `/var/local/lib/isolate/0` at the end - this means isolate created the sandbox successfully.
+
+### Quick Diagnostic Commands
+
+```powershell
+# Check if containers are running
+docker ps --filter "name=judge0"
+
+# Check isolate version (should be 2.0)
+docker exec judge0-server-1 isolate --version
+docker exec judge0-worker-1 isolate --version
+
+# Check cgroup controllers (should show: cpuset cpu memory pids)
+docker exec judge0-server-1 cat /sys/fs/cgroup/isolate/cgroup.controllers
+docker exec judge0-worker-1 cat /sys/fs/cgroup/isolate/cgroup.controllers
+
+# Test isolate manually
+docker exec judge0-server-1 bash -c "isolate --cg --init && isolate --cg --cleanup"
+```
 
 ---
 
