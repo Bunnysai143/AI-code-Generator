@@ -28,11 +28,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Only redirect to login if it's an auth token issue, not GitHub connection issue
+      // Only redirect to login for real app-auth token issues.
+      // Gist endpoints can also return 401 for GitHub token problems.
       const errorData = error.response?.data;
+      const requestUrl = error.config?.url || '';
+      const isGistRequest = requestUrl.includes('/gist');
       const isGithubError = errorData?.github_not_connected || errorData?.error?.includes?.('GitHub');
       
-      if (!isGithubError) {
+      if (!isGithubError && !isGistRequest) {
         // Handle token expiration
         localStorage.removeItem('authToken');
         if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {

@@ -99,6 +99,16 @@ def create_gist(current_user):
             }), 201
         else:
             error_msg = response.json().get('message', 'Failed to create gist')
+
+            # GitHub returns 401 when user's PAT is invalid/revoked.
+            # Keep this as a gist-specific reconnect flow, not app logout.
+            if response.status_code == 401:
+                DatabaseService.remove_github_token(current_user['id'])
+                return jsonify({
+                    'error': 'GitHub token is invalid or expired. Please reconnect your GitHub account.',
+                    'github_not_connected': True
+                }), 400
+
             return jsonify({'error': error_msg}), response.status_code
             
     except requests.ConnectionError as e:
