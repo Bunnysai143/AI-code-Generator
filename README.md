@@ -60,7 +60,8 @@ code-Gen/
 │   ├── package.json
 │   └── .env.example
 │
-├── Project_doc.md              # Detailed project documentation
+├── Project_doc.md              # Detailed project documentation (source)
+├── Project_doc.pdf             # Full project documentation in PDF format
 └── README.md
 ```
 
